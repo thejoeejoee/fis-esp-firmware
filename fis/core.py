@@ -15,15 +15,20 @@ import machine
 import binascii
 import neopixel
 
+CONFIG_FILE = 'config.json'
+
 
 class Core:
     def __init__(self):
-        self._wlan = WLAN()
+        with open(CONFIG_FILE) as f:
+            self._config = json.loads(f.read())
+
+        self._wlan = WLAN(self._config.get('wlans'))
         self._adc = machine.ADC(machine.Pin(34))
         self._adc.atten(self._adc.ATTN_11DB)  # 150 to 1750mV
 
         self._id = binascii.hexlify(machine.unique_id())
-        self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz")
+        self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz")  # TODO: to config
         self._mqtt.DEBUG = True
 
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
@@ -40,13 +45,13 @@ class Core:
 
         self._mqtt.connect(clean_session=False)
         self._mqtt.set_callback(self._on_message)
-        self._mqtt.subscribe(b'/command')
+
+        topic = '/node/{}'.format(self._id.decode())
+        self._mqtt.subscribe(topic.encode())
+        print('CORE: subscribed to {}.'.format(topic))
 
         while True:
             v = self._adc.read()
-            print('ADC: read {}.'.format(v))
-
-            self._mqtt.publish(b'/data', json.dumps(dict(type='light', payload=v, node=self._id)))
 
             self._mqtt.wait_msg()
 
@@ -64,3 +69,10 @@ class Core:
 
         time.sleep_ms(50)
         self._status_led.off()
+
+    def save_config(self):
+        with open(CONFIG_FILE, 'w') as f:
+            f.write(json.dumps(self._config))
+
+    def __del__(self):
+        self._wlan.__del__()
