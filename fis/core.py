@@ -2,6 +2,8 @@
 import esp
 import micropython
 
+from fis.apps import REGISTRY
+
 micropython.alloc_emergency_exception_buf(128)
 esp.osdebug(None)
 
@@ -61,9 +63,12 @@ class Core:
 
         print('CORE: message {}, {}'.format(topic, message))
 
-        if command.get('app') == 'neopixel':
-            self._neopixel.fill((command.get('data').get('brightness'),) * 3)
-            self._neopixel.write()
+        app = REGISTRY.get(command.get('app'))
+
+        if app:
+            app.process(command.get('payload'))
+        else:
+            print('CORE: Unknown app {}.'.format(command.get('app')))
 
         self._mqtt.publish(b'/ack', json.dumps(dict(node=self._id)))
 
