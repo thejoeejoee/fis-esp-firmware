@@ -5,12 +5,14 @@ import neopixel
 
 
 class NeoPixelDisplay(framebuf.FrameBuffer):
-    def __init__(self, np, width, height, first_backward=False):
+    CHAR_WIDTH = 6
+
+    def __init__(self, np, width, height, first_line_backward=False):
         self.width = width
         self.height = height
         self.buffer = bytearray(width * height)
         self.np = np
-        self.first_backward = first_backward
+        self.first_line_backward = first_line_backward
         assert np.n == width * height
         super().__init__(
             self.buffer,
@@ -20,20 +22,58 @@ class NeoPixelDisplay(framebuf.FrameBuffer):
         )
 
     def show(self):
-        backward_cmp = 0 if self.first_backward else 1
+        backward_cmp = 0 if self.first_line_backward else 1
         self.np.fill((0, 0, 0))
-        for i, v in enumerate(self.buffer):
+        for i, color in enumerate(self.buffer):
             x = i % self.width
             y = i // self.width
             backward = (y % 2) == backward_cmp
             index = y * self.width + (self.width - x - 1 if backward else x)
-            self.np[index] = (5, 0, 0) if v else (0, 0, 0)
+            self.np[index] = self.color_to_rgb(color)
         self.np.write()
+
+    def compact_text(self, text: str, x: int, y: int, c: int = 0b00100101):
+        for i, s in enumerate(text):
+            self.text(
+                s,
+                x - 1 + i * self.CHAR_WIDTH + i,
+                y,
+                c,
+            )
+
+    @staticmethod
+    def color_to_rgb(color):
+        return (
+            ((0b111 << 5) & color) >> 5,
+            ((0b111 << 2) & color) >> 2,
+            ((0b011 << 0) & color) >> 0,
+        )
+
+    @staticmethod
+    def rgb_to_color(r, g, b):
+        color = 0x00
+        color |= ((r & 0b111) << 5)
+        color |= ((g & 0b111) << 2)
+        color |= ((b & 0b011) << 0)
+        return color
 
 
 if __name__ == '__main__':
+    import random
+    import time
+
     WIDTH = 27
     HEIGHT = 10
+
+    BASE_COLORS = (
+        0b00100000,
+        0b00000100,
+        0b00000001,
+
+        0b00100001,
+        0b00100100,
+        0b00000101,
+    )
 
     display = NeoPixelDisplay(
         neopixel.NeoPixel(
@@ -41,12 +81,15 @@ if __name__ == '__main__':
             WIDTH * HEIGHT,
         ),
         WIDTH,
-        HEIGHT
+        HEIGHT,
+        first_line_backward=True,
     )
+    while True:
+        display.fill(display.rgb_to_color(1, 1, 1))
+        display.show()
+        time.sleep_ms(500)
 
-    display.text("w", -1, 0)
-    display.text("y", 6 + 1, 0)
-    display.text("k", 6 + 6 + 1 + 1, 0)
-    display.text("y", 6 + 6 + 6 + 1 + 1 + 1, 0)
-    display.hline(0, 9, 27, 1)
-    display.show()
+        display.fill(display.rgb_to_color(0, 0, 0))
+        display.compact_text('JOE', 0, 1, random.choice(BASE_COLORS))
+        display.show()
+        time.sleep_ms(500)
