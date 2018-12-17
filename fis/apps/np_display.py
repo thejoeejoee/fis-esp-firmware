@@ -86,7 +86,8 @@ class App(BaseApp):
             height,
             first_line_backward=True,
         )
-        self._color = self._display.rgb_to_color(1, 1, 1)
+        # TODO: store last color in init
+        self._color = 0b00100101
 
     def process(self, payload: dict):
         if payload.get('color'):

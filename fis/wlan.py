@@ -8,7 +8,7 @@ class WLAN:
     WLAN_TIMEOUT = 2 * 1000
     WLAN_TRIES_LIMIT = 3
 
-    def __init__(self, wlans):
+    def __init__(self, wlans: list):
         self._wlan = network.WLAN(network.STA_IF)
         self._timer = machine.Timer(-1)
         self._credential_index = self._tries = 0
@@ -29,10 +29,14 @@ class WLAN:
     def _connect(self, timer=None):
         if self._wlan.isconnected():
             if not self._is_connected:
+                current = self._wlans[self._credential_index]
                 print('WLAN: Connected to {} ({})!'.format(
-                    self._wlans[self._credential_index][0],
+                    current[0],
                     '; '.join(self._wlan.ifconfig())
                 ))
+                # insert working WLAN as first
+                self._wlans.remove(current)
+                self._wlans.insert(0, current)
             self._is_connected = True
             return
 

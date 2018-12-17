@@ -53,11 +53,19 @@ class Core:
             self._status_led.off()
             time.sleep_ms(100)
 
+        self.save_config() # save reordered wlans
+
+        # TODO: last will
+        # TODO: session clean?
+
+        topic = 'fis/node/{}/#'.format(self._id.decode())
+
+        # last_will_topic = '/node/{}/status'.format(self._id.decode())
+        # self._mqtt.set_last_will(last_will_topic, json.dumps(dict()))
         self._mqtt.connect(clean_session=False)
         self._mqtt.set_callback(self._on_message)
-
-        topic = '/node/{}'.format(self._id.decode())
         self._mqtt.subscribe(topic.encode())
+
         print('CORE: subscribed to {}.'.format(topic))
 
         while True:
@@ -65,19 +73,19 @@ class Core:
 
             self._mqtt.wait_msg()
 
-    def _on_message(self, topic, message):
+    def _on_message(self, topic: bytes, message: bytes):
         self._status_led.on()
         command = json.loads(message)
-        print('CORE: message {}, {}'.format(topic, message))
+        print('CORE: message {}, {}'.format(topic.decode(), message.decode()))
 
         app = self.apps.get(command.get('app_id'))
 
         if app:
             app.process(command.get('payload'))
         else:
-            print('CORE: Unknown app {}.'.format(command.get('app')))
+            print('CORE: Unknown app with app_id={}.'.format(command.get('app_id')))
 
-        self._mqtt.publish(b'/ack', json.dumps(dict(node=self._id)))
+        self._mqtt.publish(b'ack', json.dumps(dict(node=self._id)))
 
         time.sleep_ms(50)
         self._status_led.off()
