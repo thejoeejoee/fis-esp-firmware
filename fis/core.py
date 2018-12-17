@@ -35,7 +35,7 @@ class Core:
         self._adc.atten(self._adc.ATTN_11DB)  # 150 to 1750mV
 
         self._id = binascii.hexlify(machine.unique_id())
-        self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz")  # TODO: to config
+        self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz", keepalive=10)  # TODO: to config
         self._mqtt.DEBUG = True
         self._base_publish_topic = 'fis/from/{}'.format(self._id.decode())
         self._base_subscribe_topic = 'fis/to/{}'.format(self._id.decode())
@@ -55,6 +55,8 @@ class Core:
             self._status_led.off()
             time.sleep_ms(100)
 
+        self._status_led.on()
+
         self.save_config()  # save reordered wlans
 
         # TODO: last will
@@ -70,24 +72,25 @@ class Core:
         self.publish('status', dict(online=True))
 
         print('CORE: subscribed to {}/#.'.format(self._base_subscribe_topic))
+        self._status_led.off()
 
         while True:
             v = self._adc.read()
 
             self._mqtt.wait_msg()
 
-    def _on_message(self, topic: bytes, message: bytes):
+    def _on_message(self, topic: bytes, payload: bytes):
         self._status_led.on()
         topic = topic.decode()
-        command = json.loads(message)
-        print('CORE: message {}, {}'.format(topic, message.decode()))
+        payload = json.loads(payload) # type: dict
+        print('CORE: message in {}: {}.'.format(topic, payload))
 
-        app = self.apps.get(command.get('app_id'))
+        app = self.apps.get(payload.get('app_id'))
 
         if app:
-            app.process(command.get('payload'))
+            app.process(payload.get('payload'))
         else:
-            print('CORE: Unknown app with app_id={}.'.format(command.get('app_id')))
+            print('CORE: Unknown app with app_id={}.'.format(payload.get('app_id')))
 
         self.publish('ack', {})
 
