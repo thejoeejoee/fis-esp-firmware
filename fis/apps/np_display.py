@@ -3,6 +3,8 @@ import framebuf
 import machine
 import neopixel
 
+from fis.apps.base import BaseApp
+
 WIDTH = 27
 HEIGHT = 10
 
@@ -49,7 +51,7 @@ class NeoPixelDisplay(framebuf.FrameBuffer):
         return (
             ((0b111 << 5) & color) >> 5,
             ((0b111 << 2) & color) >> 2,
-            2 *((0b011 << 0) & color) >> 0,
+            2 * ((0b011 << 0) & color) >> 0,
         )
 
     @staticmethod
@@ -64,16 +66,24 @@ class NeoPixelDisplay(framebuf.FrameBuffer):
         return color
 
 
-class App(object):
-    def __init__(self, config):
-        self._config = config
+class App(BaseApp):
+    _display = _color = None
+
+    def init(self):
+        width = int(self._config.get('width'))
+        height = int(self._config.get('height'))
+
         self._display = NeoPixelDisplay(
             neopixel.NeoPixel(
-                machine.Pin(4, mode=machine.Pin.OUT),
-                WIDTH * HEIGHT,
+                machine.Pin(
+                    # TODO: load parameters?
+                    int(self._config.get('port')),
+                    mode=machine.Pin.OUT
+                ),
+                width * height,
             ),
-            WIDTH,
-            HEIGHT,
+            width,
+            height,
             first_line_backward=True,
         )
         self._color = self._display.rgb_to_color(1, 1, 1)

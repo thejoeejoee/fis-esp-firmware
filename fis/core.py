@@ -2,10 +2,15 @@
 import esp
 import micropython
 
-from fis.apps import REGISTRY
+from fis.apps.base import BaseApp
 
 micropython.alloc_emergency_exception_buf(128)
 esp.osdebug(None)
+
+try:
+    import typing
+except ImportError:
+    typing = None
 
 from .wlan import WLAN
 import json
@@ -15,7 +20,7 @@ from umqtt.robust import MQTTClient
 import time
 import machine
 import binascii
-import neopixel
+from .apps.config import App as ConfigApp
 
 CONFIG_FILE = 'config.json'
 
@@ -33,8 +38,11 @@ class Core:
         self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz")  # TODO: to config
         self._mqtt.DEBUG = True
 
+        self.apps = dict(
+            config=ConfigApp(self),
+        )  # type: typing.Dict[str, BaseApp]
+
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
-        self._neopixel = neopixel.NeoPixel(machine.Pin(4, machine.Pin.OUT), 10)
 
     def start(self):
         self._wlan.connect()
@@ -60,10 +68,9 @@ class Core:
     def _on_message(self, topic, message):
         self._status_led.on()
         command = json.loads(message)
-
         print('CORE: message {}, {}'.format(topic, message))
 
-        app = REGISTRY.get(command.get('app'))
+        app = self.apps.get(command.get('app_id'))
 
         if app:
             app.process(command.get('payload'))
