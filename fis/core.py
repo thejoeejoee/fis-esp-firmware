@@ -37,6 +37,8 @@ class Core:
         self._id = binascii.hexlify(machine.unique_id())
         self._mqtt = MQTTClient(self._id, "fis.josefkolar.cz")  # TODO: to config
         self._mqtt.DEBUG = True
+        self._base_publish_topic = 'fis/from/{}'.format(self._id.decode())
+        self._base_subscribe_topic = 'fis/to/{}'.format(self._id.decode())
 
         self.apps = dict(
             config=ConfigApp(self),
@@ -53,20 +55,21 @@ class Core:
             self._status_led.off()
             time.sleep_ms(100)
 
-        self.save_config() # save reordered wlans
+        self.save_config()  # save reordered wlans
 
         # TODO: last will
         # TODO: session clean?
 
-        topic = 'fis/node/{}/#'.format(self._id.decode())
+        last_will_topic = '{}/status'.format(self._base_publish_topic)
+        self._mqtt.set_last_will(last_will_topic, json.dumps(dict(online=False)), retain=False, qos=2)
 
-        # last_will_topic = '/node/{}/status'.format(self._id.decode())
-        # self._mqtt.set_last_will(last_will_topic, json.dumps(dict()))
         self._mqtt.connect(clean_session=False)
         self._mqtt.set_callback(self._on_message)
-        self._mqtt.subscribe(topic.encode())
+        self._mqtt.subscribe('{}/#'.format(self._base_subscribe_topic).encode())
 
-        print('CORE: subscribed to {}.'.format(topic))
+        self.publish('status', dict(online=True))
+
+        print('CORE: subscribed to {}/#.'.format(self._base_subscribe_topic))
 
         while True:
             v = self._adc.read()
@@ -75,8 +78,9 @@ class Core:
 
     def _on_message(self, topic: bytes, message: bytes):
         self._status_led.on()
+        topic = topic.decode()
         command = json.loads(message)
-        print('CORE: message {}, {}'.format(topic.decode(), message.decode()))
+        print('CORE: message {}, {}'.format(topic, message.decode()))
 
         app = self.apps.get(command.get('app_id'))
 
@@ -85,10 +89,18 @@ class Core:
         else:
             print('CORE: Unknown app with app_id={}.'.format(command.get('app_id')))
 
-        self._mqtt.publish(b'ack', json.dumps(dict(node=self._id)))
+        self.publish('ack', {})
 
         time.sleep_ms(50)
         self._status_led.off()
+
+    def publish(self, subtopic: str, payload: dict):
+        # TODO: retain/qos
+        topic = '{}/{}'.format(
+            self._base_publish_topic,
+            subtopic.strip('/')
+        ).encode()
+        self._mqtt.publish(topic, json.dumps(payload))
 
     def save_config(self):
         with open(CONFIG_FILE, 'w') as f:
