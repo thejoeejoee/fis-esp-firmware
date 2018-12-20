@@ -3,10 +3,7 @@ import framebuf
 import machine
 import neopixel
 
-from fis.apps.base import BaseApp
-
-WIDTH = 27
-HEIGHT = 10
+from .base import BaseApp
 
 
 class NeoPixelDisplay(framebuf.FrameBuffer):
@@ -107,6 +104,9 @@ class App(BaseApp):
 if __name__ == '__main__':
     import random
     import time
+
+    WIDTH = 27
+    HEIGHT = 10
 
     BASE_COLORS = (
         0b00100000,

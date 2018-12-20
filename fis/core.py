@@ -15,7 +15,7 @@ except ImportError:
 from .wlan import WLAN
 import json
 
-from umqtt.robust import MQTTClient
+from umqtt.simple import MQTTClient # TODO: custom mqtt class, robust is bullshit
 
 import time
 import machine
@@ -43,6 +43,7 @@ class Core:
         self.apps = dict(
             config=ConfigApp(self),
         )  # type: typing.Dict[str, BaseApp]
+        self._scheduled_actions = []  # type: typing.List[typing.Tuple[int, typing.Callable]]
 
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
 
@@ -75,14 +76,36 @@ class Core:
         self._status_led.off()
 
         while True:
-            v = self._adc.read()
+            try:
+                self._mqtt.check_msg()
+            except OSError as e:
+                if e.errno != -1:
+                    raise e
 
-            self._mqtt.wait_msg()
+            now = time.time()
+            print('CORE: loop for {}, planned {}.'.format(now, len(self._scheduled_actions)))
+
+            for action in filter(
+                    lambda act: act[0] <= now,  # older or equal to now
+                    self._scheduled_actions
+            ):
+                _, action_cb = action
+                action_cb()
+                self._scheduled_actions.remove(action)
+
+            time.sleep(1)  # 1 sec loop
+
+            # v = self._adc.read()
+
+    def schedule(self, in_time: int, action: "typing.Callable"):
+        at = int(time.time() + in_time)
+        # TODO: only one scheduled by app?
+        self._scheduled_actions.append((at, action))
 
     def _on_message(self, topic: bytes, payload: bytes):
         self._status_led.on()
         topic = topic.decode()
-        payload = json.loads(payload) # type: dict
+        payload = json.loads(payload)  # type: dict
         print('CORE: message in {}: {}.'.format(topic, payload))
 
         app = self.apps.get(payload.get('app_id'))
@@ -93,8 +116,6 @@ class Core:
             print('CORE: Unknown app with app_id={}.'.format(payload.get('app_id')))
 
         self.publish('ack', {})
-
-        time.sleep_ms(50)
         self._status_led.off()
 
     def publish(self, subtopic: str, payload: dict):
@@ -102,8 +123,9 @@ class Core:
         topic = '{}/{}'.format(
             self._base_publish_topic,
             subtopic.strip('/')
-        ).encode()
-        self._mqtt.publish(topic, json.dumps(payload))
+        )
+        print('CORE: publish {} {}'.format(topic, payload))
+        self._mqtt.publish(topic.encode(), json.dumps(payload), qos=0) # TODO: qos=1 wants wait_message
 
     def save_config(self):
         with open(CONFIG_FILE, 'w') as f:

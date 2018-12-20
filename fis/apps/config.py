@@ -6,6 +6,7 @@ class App(BaseApp):
         app_id = msg.get('app_id')
         app_key = msg.get('app')
         config = msg.get('config')
+        config.update(id=app_id)
         from . import APPS
 
         if app_id in self._core.apps:
