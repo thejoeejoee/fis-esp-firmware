@@ -64,7 +64,7 @@ class Core:
         # TODO: session clean?
 
         last_will_topic = '{}/status'.format(self._base_publish_topic)
-        self._mqtt.set_last_will(last_will_topic, json.dumps(dict(online=False)), retain=False, qos=2)
+        self._mqtt.set_last_will(last_will_topic, json.dumps(dict(online=False)), retain=True, qos=1)
 
         self._mqtt.connect(clean_session=False)
         self._mqtt.set_callback(self._on_message)
@@ -79,11 +79,11 @@ class Core:
             try:
                 self._mqtt.check_msg()
             except OSError as e:
-                if e.errno != -1:
+                if getattr(e, 'errno', -1) != -1:
                     raise e
 
             now = time.time()
-            print('CORE: loop for {}, planned {}.'.format(now, len(self._scheduled_actions)))
+            # print('CORE: loop for {}, planned {}.'.format(now, len(self._scheduled_actions)))
 
             for action in filter(
                     lambda act: act[0] <= now,  # older or equal to now
@@ -125,7 +125,11 @@ class Core:
             subtopic.strip('/')
         )
         print('CORE: publish {} {}'.format(topic, payload))
-        self._mqtt.publish(topic.encode(), json.dumps(payload), qos=0) # TODO: qos=1 wants wait_message
+        self._mqtt.publish(
+            topic.encode(),
+            json.dumps(payload) if payload is not None else '',
+            qos=1
+        ) # TODO: qos=1 wants wait_message
 
     def save_config(self):
         with open(CONFIG_FILE, 'w') as f:
