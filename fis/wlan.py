@@ -1,16 +1,15 @@
 # coding=utf-8
+import time
 
-import machine
 import network
 
 
 class WLAN:
-    WLAN_TIMEOUT = 2 * 1000
+    WLAN_TIMEOUT = 1500
     WLAN_TRIES_LIMIT = 3
 
     def __init__(self, wlans: list):
         self._wlan = network.WLAN(network.STA_IF)
-        self._timer = machine.Timer(-1)
         self._credential_index = self._tries = 0
         self._is_connected = False
 
@@ -19,14 +18,9 @@ class WLAN:
     def connect(self):
         self._wlan.active(True)
         self._wlan.scan()
-        self._timer.init(
-            period=self.WLAN_TIMEOUT,
-            mode=machine.Timer.PERIODIC,
-            callback=self._connect
-        )
         self._connect()
 
-    def _connect(self, timer=None):
+    def _connect(self):
         if self._wlan.isconnected():
             if not self._is_connected:
                 current = self._wlans[self._credential_index]
@@ -42,7 +36,7 @@ class WLAN:
 
         self._is_connected = False
         if self._tries >= self.WLAN_TRIES_LIMIT:
-            self._credential_index = self._credential_index + 1 if self._credential_index + 1 < len(self._wlans) else 0
+            self._credential_index = (self._credential_index + 1) % len(self._wlans)
             print('WLAN: trying next AP: {}.'.format(self._wlans[self._credential_index][0]))
             self._tries = 0
         elif self._tries == 0:
@@ -64,8 +58,6 @@ class WLAN:
 
     def __del__(self):
         self._wlan.active(False)
-        self._timer.deinit()
 
 
 __all__ = ['WLAN']
-

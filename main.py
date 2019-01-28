@@ -1,4 +1,10 @@
 from fis.core import Core
 
 c = Core()
-# c.start()
+while True:
+    try:
+        c.start()
+    except OSError:
+        pass
+
+
