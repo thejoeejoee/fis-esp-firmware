@@ -2,6 +2,7 @@ from .base import BaseApp
 from .config import App as ConfigApp
 from .dht_sensor import App as DHTSensorApp
 from .np_display import App as NeoPixelDisplayApp
+from .dac import App as DACApp
 
 try:
     import typing
@@ -11,4 +12,5 @@ except ImportError:
 APPS = {
     'neopixel-display': NeoPixelDisplayApp,
     'dht-sensor': DHTSensorApp,
+    'dac': DACApp,
 }  # type: typing.Dict[str, typing.Type[BaseApp]]
