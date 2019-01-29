@@ -15,9 +15,11 @@ class WLAN:
 
         self._wlans = wlans
 
-    def connect(self):
+    def initialize(self):
         self._wlan.active(True)
         self._wlan.scan()
+
+    def connect(self):
         self._connect()
 
     def _connect(self):

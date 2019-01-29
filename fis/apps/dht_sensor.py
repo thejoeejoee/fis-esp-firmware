@@ -7,7 +7,7 @@ from .base import BaseApp
 
 
 class App(BaseApp):
-    _dht = None
+    _dht = _scheduled = None
 
     def init(self):
         self._dht = dht.DHT22(
@@ -15,7 +15,7 @@ class App(BaseApp):
                 int(self._config.get('port')),
             ),
         )
-        self._core.schedule(0, self._measure)
+        self.schedule(0, self._measure)
         print('DHT: Scheduled measure')
 
     def process(self, payload: dict):
@@ -27,24 +27,19 @@ class App(BaseApp):
         except OSError:
             print('DHT: Something wrong :-(')
             # TODO: publish status
-            self._core.schedule(10, self._measure)
+            self.schedule(10, self._measure)
             return
 
-        self._core.schedule(
-            3,
-            self._export_measure
-        )
+        self.schedule(3, self._export_measure)
         print('DHT: Scheduled export')
-
 
     def _export_measure(self):
         self._publish(dict(
             temperature=self._dht.temperature(),
             humidity=self._dht.humidity(),
         ), 'data')
-        self._core.schedule(10, self._measure)
+        self.schedule(10, self._measure)
         print('DHT: Rescheduled measure')
-
 
 
 if __name__ == '__main__':

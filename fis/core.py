@@ -44,16 +44,21 @@ class Core:
             config=ConfigApp(self),
         )  # type: typing.Dict[str, BaseApp]
         self._scheduled_actions = []  # type: typing.List[typing.Tuple[int, typing.Callable]]
+        self._app_last_actions = {}  # type: typing.Dict[BaseApp, typing.Tuple[int, typing.Callable]]
 
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
 
     def start(self):
+        self._wlan.initialize()
+        self._status_led.on()
+        time.sleep(3)
+
         while not self._wlan.is_connected:
             self._wlan.connect()
             self._status_led.on()
-            time.sleep_ms(750)
+            time.sleep(2)
             self._status_led.off()
-            time.sleep_ms(750)
+            time.sleep(2)
 
         self._status_led.on()
 
@@ -93,17 +98,25 @@ class Core:
             ):
                 _, action_cb = action
                 action_cb()
-                self._scheduled_actions.remove(action)
+                if action in self._scheduled_actions: # TODO: wtf?
+                    self._scheduled_actions.remove(action)
 
             # print('CORE: loop!')
             time.sleep(1)  # 1 sec loop
 
             # v = self._adc.read()
 
-    def schedule(self, in_time: int, action: "typing.Callable"):
+    def schedule(self, for_app: BaseApp, in_time: int, action: "typing.Callable"):
         at = int(time.time() + in_time)
-        # TODO: only one scheduled by app?
-        self._scheduled_actions.append((at, action))
+
+        already = self._app_last_actions.get(for_app)
+        if already in self._scheduled_actions:
+            self._scheduled_actions.remove(already)
+
+        item = (at, action)
+        self._app_last_actions[for_app] = item
+        self._scheduled_actions.append(item)
+        return item
 
     def _on_message(self, topic: bytes, payload: bytes):
         self._status_led.on()

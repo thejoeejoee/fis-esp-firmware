@@ -18,3 +18,10 @@ class BaseApp(object):
             '/'.join(filter(None, ('app', self._id, subtopic))),
             payload
         )
+
+    def schedule(self, in_time, action):
+        return self._core.schedule(
+            for_app=self,
+            in_time=in_time,
+            action=action
+        )
