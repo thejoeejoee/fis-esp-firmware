@@ -10,18 +10,18 @@ class BaseApp(object):
     def process(self, msg: dict):
         raise NotImplementedError
 
-    def init(self):
+    async def init(self):
         pass
 
-    def _publish(self, payload: dict, subtopic=None):
-        return self._core.publish(
+    async def _publish(self, payload: dict, subtopic=None):
+        return await self._core.publish(
             '/'.join(filter(None, ('app', self._id, subtopic))),
             payload
         )
 
-    def schedule(self, in_time, action):
-        return self._core.schedule(
+    async def schedule(self, in_time, action):
+        return await self._core.schedule(
             for_app=self,
-            in_time=in_time,
+            delay=in_time,
             action=action
         )

@@ -2,7 +2,7 @@ from .base import BaseApp
 
 
 class App(BaseApp):
-    def process(self, msg: dict):
+    async def process(self, msg: dict):
         app_id = msg.get('app_id')
         app_key = msg.get('app')
         config = msg.get('config')
@@ -12,7 +12,7 @@ class App(BaseApp):
         if app_id in self._core.apps:
             app = self._core.apps.get(app_id)
             app._config.update(config)
-            app.init()  # reinit
+            await app.init()  # reinit
             print('CONF: New config {} ({}).'.format(app._config, app_id))
 
         elif app_key in APPS:
@@ -20,7 +20,7 @@ class App(BaseApp):
                 self._core,
                 config,
             )
-            app.init()
+            await app.init()
             print('CONF: New app {} ({}).'.format(app_key, app_id))
         else:
             print('CONF: unknown {}.'.format(msg))
