@@ -64,7 +64,6 @@ class Core:
 
         self.save_config()  # save reordered wlans
 
-        # TODO: last will
         # TODO: session clean?
 
         last_will_topic = '{}/status'.format(self._base_publish_topic)
@@ -98,7 +97,7 @@ class Core:
             ):
                 _, action_cb = action
                 action_cb()
-                if action in self._scheduled_actions: # TODO: wtf?
+                if action in self._scheduled_actions:  # TODO: wtf?
                     self._scheduled_actions.remove(action)
 
             # print('CORE: loop!')
@@ -140,7 +139,7 @@ class Core:
         # self.publish('ack', {})
         self._status_led.off()
 
-    def publish(self, subtopic: str, payload: dict):
+    def publish(self, subtopic: str, payload: dict, retain: bool = False):
         # TODO: retain/qos
         topic = '{}/{}'.format(
             self._base_publish_topic,
@@ -150,7 +149,8 @@ class Core:
         self._mqtt.publish(
             topic.encode(),
             json.dumps(payload) if payload is not None else '',
-            qos=1
+            qos=1,
+            retain=retain,
         )  # TODO: qos=1 wants wait_message
 
     def save_config(self):
