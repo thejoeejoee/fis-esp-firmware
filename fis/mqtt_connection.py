@@ -13,24 +13,28 @@ class MQTTConnection(BaseMQTTClient):
     async def wifi_connect(self):
         s = self._sta_if
 
-        s.disconnect()
-        esp32_pause()  # Otherwise sometimes fails to reconnect and hangs
-        await asyncio.sleep(1)
         cred_index = 0
 
         while True:
+            self._status_led.on()
+            s.disconnect()
+            esp32_pause()  # Otherwise sometimes fails to reconnect and hangs
+            await asyncio.sleep(1)
+
             ssid, pw = self._creds[cred_index]
             self.dprint('Connecting to {}.'.format(ssid))
             s.connect(ssid, pw)
 
             attempt = 0
-            while not s.isconnected() and attempt <= self.MAX_ATTEMPTS:
-                # ESP32 does not yet support STAT_CONNECTING
-                esp32_pause()
-                # https://github.com/micropython/micropython-esp32/issues/167 still seems necessary
-                await asyncio.sleep(1)
-                attempt += 1
+            self.dprint('Is connected at attempt {}? {}'.format(attempt, s.isconnected()))
 
+            for i in range(7):
+                esp32_pause()
+                await asyncio.sleep(1)
+                if s.isconnected():
+                    break
+
+            self.dprint('Is connected at final attempt {}? {}'.format(attempt, s.isconnected()))
             if s.isconnected():
                 break
             cred_index = (cred_index + 1) % len(self._creds)
@@ -51,6 +55,7 @@ class MQTTConnection(BaseMQTTClient):
             await asyncio.sleep(1)
 
         self.dprint('Got reliable connection')
+        self._status_led.off()
         # Timed out: assumed reliable
 
     def dprint(self, *msg):

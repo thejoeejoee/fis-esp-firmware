@@ -66,7 +66,7 @@ class NeoPixelDisplay(framebuf.FrameBuffer):
 class App(BaseApp):
     _display = _color = None
 
-    def init(self):
+    async def init(self):
         width = int(self._config.get('width'))
         height = int(self._config.get('height'))
 
@@ -86,7 +86,7 @@ class App(BaseApp):
         # TODO: store last color in init
         self._color = 0b00100101
 
-    def process(self, payload: dict, subtopics: list):
+    async def process(self, payload: dict, subtopics: list):
         if payload.get('color'):
             self._color = self._display.rgb_to_color(*payload.get('color'))
 

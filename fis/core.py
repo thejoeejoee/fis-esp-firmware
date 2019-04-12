@@ -46,7 +46,7 @@ class Core:
         self.apps = dict(
             config=ConfigApp(self),
         )  # type: typing.Dict[str, BaseApp]
-        self._apps_tasks = dict()  # type: typing.Dict[str, asyncio.Task]
+        self._apps_tasks = dict()  # type: typing.Dict[str, asyncio.Corutine]
 
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
 
@@ -94,14 +94,14 @@ class Core:
         """
         Plan task for given app - already existing app task is cancelled.
         """
-        existing = self._apps_tasks.get(for_app.id)
-        if existing and not existing.cancelled():
-            existing.cancel()
+        existing_coro = self._apps_tasks.get(for_app.id)
+        if existing_coro:
+            asyncio.cancel(existing_coro)
 
-        task = self._loop.create_task(coro)
+        self._loop.create_task(coro)
 
-        self._apps_tasks[for_app.id] = task
-        return task
+        self._apps_tasks[for_app.id] = coro
+        return coro
 
     async def _on_wifi_state_change(self, state):
         """Save config with known wlans after succesfull connection to WLAN."""
@@ -126,9 +126,12 @@ class Core:
         try:
             payload = json.loads(payload)  # type: dict
         except ValueError:
-            if not payload:  # retain reset is empty message
+            if payload:
                 print('CORE: error during message parsing: {}.'.format(payload))
+            else:
+                # retain reset is empty message
                 self._status_led.off()
+                return
 
         local_subtopic = topic[len(self._base_subscribe_topic):].lstrip('/')
         print('CORE: message in ./{}: {}.'.format(local_subtopic, payload))
@@ -139,8 +142,8 @@ class Core:
             app_id = subtopic_args[0]
             app = self.apps.get(app_id)
             await app.process(
-                msg=payload.get('payload'),
-                subtopics=subtopic_args[1:]  # exclude first app_id
+                payload.get('payload'),
+                subtopic_args[1:]  # exclude first app_id
             )
 
         else:
@@ -150,6 +153,7 @@ class Core:
         self._status_led.off()
 
     async def publish(self, subtopic: str, payload: dict, retain: bool = False):
+        self._status_led.on()
         topic = '{}/{}'.format(
             self._base_publish_topic,
             subtopic.strip('/')
@@ -161,6 +165,7 @@ class Core:
             qos=1,
             retain=retain,
         )
+        self._status_led.off()
 
     def save_config(self):
         with open(CONFIG_FILE, 'w') as f:

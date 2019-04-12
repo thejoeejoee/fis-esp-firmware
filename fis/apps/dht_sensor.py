@@ -20,7 +20,7 @@ class App(BaseApp):
         print('DHT: Scheduled measure')
         self._run_app_task(self._run_measurement())
 
-    def process(self, payload: dict, subtopics: list):
+    async def process(self, payload: dict, subtopics: list):
         pass
 
     async def _run_measurement(self):

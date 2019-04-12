@@ -8,10 +8,13 @@ class BaseApp(object):
         self._id = self._config.get('id')
 
     # TODO: consume also topic (or extracted information from topic)
-    def process(self, msg: dict, subtopics: list):
+    async def process(self, msg: dict, subtopics: list):
         raise NotImplementedError
 
     async def init(self):
+        pass
+
+    async def deinit(self):
         pass
 
     async def _publish(self, payload: dict, subtopic=None):
