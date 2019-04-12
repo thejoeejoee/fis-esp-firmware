@@ -86,7 +86,7 @@ class App(BaseApp):
         # TODO: store last color in init
         self._color = 0b00100101
 
-    def process(self, payload: dict):
+    def process(self, payload: dict, subtopics: list):
         if payload.get('color'):
             self._color = self._display.rgb_to_color(*payload.get('color'))
 

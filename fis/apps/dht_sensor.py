@@ -4,10 +4,12 @@ import dht
 import machine
 
 from .base import BaseApp
+import uasyncio as asyncio
 
 
 class App(BaseApp):
-    _dht = _scheduled = None
+    _dht = None
+    MEASURE_EXPORT_DELAY = 3
 
     async def init(self):
         self._dht = dht.DHT22(
@@ -15,31 +17,29 @@ class App(BaseApp):
                 int(self._config.get('port')),
             ),
         )
-        await self.schedule(1, self._measure())
         print('DHT: Scheduled measure')
+        self._run_app_task(self._run_measurement())
 
-    def process(self, payload: dict):
+    def process(self, payload: dict, subtopics: list):
         pass
 
-    async def _measure(self):
-        try:
-            self._dht.measure()
-        except OSError:
-            print('DHT: Something wrong :-(')
-            # TODO: publish status
-            await self.schedule(10, self._measure())
-            return
+    async def _run_measurement(self):
+        while True:
+            try:
+                self._dht.measure()
+            except OSError:
+                print('DHT: Something wrong :-(')
+                # TODO: publish log with fail
+                await asyncio.sleep(10)
+                continue
 
-        await self.schedule(3, self._export_measure())
-        print('DHT: Scheduled export')
-
-    async def _export_measure(self):
-        await self._publish(dict(
-            temperature=self._dht.temperature(),
-            humidity=self._dht.humidity(),
-        ), 'data')
-        await self.schedule(10, self._measure())
-        print('DHT: Rescheduled measure')
+            await asyncio.sleep(self.MEASURE_EXPORT_DELAY)
+            await self._publish(dict(
+                temperature=self._dht.temperature(),
+                humidity=self._dht.humidity(),
+            ), 'data')
+            print('DHT: Rescheduled measure')
+            await asyncio.sleep(10)
 
 
 if __name__ == '__main__':

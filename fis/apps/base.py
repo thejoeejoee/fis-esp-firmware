@@ -7,7 +7,8 @@ class BaseApp(object):
         self._core = core
         self._id = self._config.get('id')
 
-    def process(self, msg: dict):
+    # TODO: consume also topic (or extracted information from topic)
+    def process(self, msg: dict, subtopics: list):
         raise NotImplementedError
 
     async def init(self):
@@ -19,9 +20,12 @@ class BaseApp(object):
             payload
         )
 
-    async def schedule(self, in_time, action):
-        return await self._core.schedule(
+    def _run_app_task(self, coro):
+        return self._core.run_app_task(
             for_app=self,
-            delay=in_time,
-            action=action
+            coro=coro
         )
+
+    @property
+    def id(self):
+        return self._id

@@ -2,8 +2,8 @@ from .base import BaseApp
 
 
 class App(BaseApp):
-    async def process(self, msg: dict):
-        app_id = msg.get('app_id')
+    async def process(self, msg: dict, subtopics: list):
+        app_id = subtopics[0]
         app_key = msg.get('app')
         config = msg.get('config')
         config.update(id=app_id)

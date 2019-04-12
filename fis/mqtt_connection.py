@@ -20,6 +20,7 @@ class MQTTConnection(BaseMQTTClient):
 
         while True:
             ssid, pw = self._creds[cred_index]
+            self.dprint('Connecting to {}.'.format(ssid))
             s.connect(ssid, pw)
 
             attempt = 0
@@ -35,7 +36,7 @@ class MQTTConnection(BaseMQTTClient):
             cred_index = (cred_index + 1) % len(self._creds)
 
         current = self._creds[cred_index]
-        print('WLAN: Connected to {} ({})!'.format(current[0], '; '.join(s.ifconfig())))
+        self.dprint('Connected to {} ({})!'.format(current[0], '; '.join(s.ifconfig())))
         # insert working WLAN as first
         self._creds.remove(current)
         self._creds.insert(0, current)
@@ -48,9 +49,10 @@ class MQTTConnection(BaseMQTTClient):
                 raise OSError('WiFi connection fail.')  # in 1st 5 secs
             esp32_pause()
             await asyncio.sleep(1)
+
         self.dprint('Got reliable connection')
         # Timed out: assumed reliable
 
-    def dprint(self, msg):
+    def dprint(self, *msg):
         # if self.DEBUG:
-        print('MQTT: {}'.format(msg))
+        print('MQTT: {}'.format(' '.join(map(str, msg))))

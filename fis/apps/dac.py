@@ -14,7 +14,7 @@ class App(BaseApp):
             machine.Pin(port, mode=machine.Pin.OUT)
         )
 
-    def process(self, payload: dict):
+    def process(self, payload: dict, subtopics: list):
         if payload.get('value'):
             value = int(max(0., min(1., float(payload.get('value')))) * 190)
             self._dac.write(value)
