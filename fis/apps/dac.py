@@ -15,7 +15,8 @@ class App(BaseApp):
         )
 
     async def process(self, payload: dict, subtopics: list):
-        if payload.get('value'):
-            value = int(max(0., min(1., float(payload.get('value')))) * 190)
+        value = payload.get('value')
+        if value is not None:
+            value = int(max(0., min(1., float(value))) * 190)
             self._dac.write(value)
             print("DAC: Value {} was written.".format(value))

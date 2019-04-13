@@ -9,6 +9,7 @@ import uasyncio as asyncio
 
 class App(BaseApp):
     _dht = None
+    _interval = 10
     MEASURE_EXPORT_DELAY = 3
 
     async def init(self):
@@ -17,6 +18,8 @@ class App(BaseApp):
                 int(self._config.get('port')),
             ),
         )
+        self._interval = max((float(self._config.get('interval')), 3)) - 3  # export interval
+
         print('DHT: Scheduled measure')
         self._run_app_task(self._run_measurement())
 
@@ -30,7 +33,7 @@ class App(BaseApp):
             except OSError:
                 print('DHT: Something wrong :-(')
                 # TODO: publish log with fail
-                await asyncio.sleep(10)
+                await asyncio.sleep(self._interval)
                 continue
 
             await asyncio.sleep(self.MEASURE_EXPORT_DELAY)
@@ -39,7 +42,7 @@ class App(BaseApp):
                 humidity=self._dht.humidity(),
             ), 'data')
             print('DHT: Rescheduled measure')
-            await asyncio.sleep(10)
+            await asyncio.sleep(self._interval)
 
 
 if __name__ == '__main__':

@@ -159,6 +159,7 @@ class Core:
             subtopic.strip('/')
         )
         print('CORE: publish ./{}: {}'.format(subtopic, payload))
+        # TODO: check connection, if not ok, store message in temp list and send them after reconnection
         await self._connection.publish(
             topic.encode(),
             json.dumps(payload) if payload is not None else '',
