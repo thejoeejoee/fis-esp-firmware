@@ -18,7 +18,7 @@ class App(BaseApp):
                 int(self._config.get('port')),
             ),
         )
-        self._interval = max((float(self._config.get('interval')), 3)) - 3  # export interval
+        self._interval = max((float(self._config.get('interval') or 0), 3)) - 3  # export interval
 
         print('DHT: Scheduled measure')
         self._run_app_task(self._run_measurement())

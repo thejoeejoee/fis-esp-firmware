@@ -4,5 +4,8 @@
       "SSID",
       "password"
     ]
-  ]
+  ],
+  "broker": "fis.josefkolar.cz",
+  "broker-username": "user",
+  "broker-password": "pass"
 }

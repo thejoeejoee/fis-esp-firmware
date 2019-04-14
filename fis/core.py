@@ -18,8 +18,6 @@ except ImportError:
 from .mqtt_connection import MQTTConnection
 import json
 
-from umqtt.simple import MQTTClient  # TODO: custom mqtt class, robust is bullshit
-
 import time
 import machine
 import binascii
@@ -60,7 +58,9 @@ class Core:
             status_led=self._status_led,
             wifi_creds=self._config.get('wlans'),
             client_id='esp-{}'.format(self._id),
-            server="fis.josefkolar.cz",
+            user=self._config.get('broker-username'),
+            password=self._config.get('broker-password'),
+            server=self._config.get('broker'),
             will=last_will,
             keepalive=30,  # TODO ?
             wifi_coro=self._on_wifi_state_change,
@@ -81,11 +81,14 @@ class Core:
         """
         Main loop - nearly empty, because all of magic, after connection, happens in _on_message coroutine.
         """
+
+        self._status_led.on()
         try:
             await self._connection.connect()
         except OSError as e:
             print('Connection failed: {}.'.format(str(e)))
             return
+        self._status_led.off()
 
         while True:
             await asyncio.sleep(5)
@@ -107,6 +110,8 @@ class Core:
         """Save config with known wlans after succesfull connection to WLAN."""
         if state:
             self.save_config()  # save reordered wlans
+        else:
+            self._status_led.on()
 
     async def _on_estabilished_connection(self, connection: MQTTConnection):
         """After broker connection is estabilished, subscribe main channel and publish node status."""

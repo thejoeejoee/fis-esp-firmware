@@ -16,7 +16,6 @@ class MQTTConnection(BaseMQTTClient):
         cred_index = 0
 
         while True:
-            self._status_led.on()
             s.disconnect()
             esp32_pause()  # Otherwise sometimes fails to reconnect and hangs
             await asyncio.sleep(1)
@@ -55,7 +54,6 @@ class MQTTConnection(BaseMQTTClient):
             await asyncio.sleep(1)
 
         self.dprint('Got reliable connection')
-        self._status_led.off()
         # Timed out: assumed reliable
 
     def dprint(self, *msg):
