@@ -25,7 +25,7 @@ class App(BaseApp):
         # interval
 
         print('DHT: Scheduled measure')
-        self._run_app_task(self._run_measurement())
+        self._plan_app_task(self._run_measurement())
 
     async def process(self, payload: dict, subtopics: list):
         pass
@@ -36,7 +36,7 @@ class App(BaseApp):
                 self._dht.measure()
             except OSError as e:
                 await self._log(
-                    content="Failed to send mesasure command to sensor: {}.".format(e),
+                    content="Failed to communicate with sensor: {}.".format(e),
                     level=self.LOG_ERROR,
                 )
                 await asyncio.sleep(self._interval)

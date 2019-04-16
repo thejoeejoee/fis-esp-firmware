@@ -78,15 +78,18 @@ class Core:
         """
         self._loop.run_until_complete(self._run())
 
-    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable"):
+    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable"=None):
         """
         Plan task for given app - already existing app task is cancelled.
         Method called from app instances to start app loop.
+        If no coro is given, task is only removed, not planned.
         """
         existing_coro = self._apps_tasks.get(for_app.id)
         if existing_coro:
             asyncio.cancel(existing_coro)
 
+        if not coro:
+            return None
         self._loop.create_task(coro)
 
         self._apps_tasks[for_app.id] = coro
