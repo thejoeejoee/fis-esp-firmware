@@ -42,13 +42,12 @@ class App(BaseApp):
                 app._plan_app_task(coro=None)  # reset planned task
                 await app.init()
             except Exception as e:
-                await self._log(
+                await self._error(
                     content="Error during app {} init with config '{}': '{}'".format(
                         app_key,
                         app.config,
                         str(e)
                     ),
-                    level=self.LOG_ERROR,
                     app_id=app_id,  # ERROR of specific app, not error of ConfigApp
                 )
 

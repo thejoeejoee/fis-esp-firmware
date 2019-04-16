@@ -78,7 +78,7 @@ class Core:
         """
         self._loop.run_until_complete(self._run())
 
-    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable"=None):
+    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable" = None):
         """
         Plan task for given app - already existing app task is cancelled.
         Method called from app instances to start app loop.
@@ -143,7 +143,7 @@ class Core:
     async def _on_estabilished_connection(self, connection: MQTTConnection):
         """After broker connection is estabilished, subscribe main channel and publish node status."""
         await self._connection.subscribe('{}/#'.format(self._base_subscribe_topic).encode())
-        await self.publish('status', dict(online=True), retain=True)
+        await self.publish('status', dict(online=True), retain=True)  # hello there!
 
     def _on_message_sync(self, topic, payload, retained):
         """Callback version of message processor - used for MQTTConnection."""
@@ -173,6 +173,9 @@ class Core:
             # message for some of app
             app_id = subtopic_args[0]
             app = self.apps.get(app_id)
+            if not app:
+                pass  # TODO: (retained) message maybe come to early, so store it and wait for app config
+
             try:
                 await app.process(
                     payload.get('payload'),
