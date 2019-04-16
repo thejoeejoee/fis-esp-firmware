@@ -48,6 +48,7 @@ class Core:
 
         self._status_led = machine.Signal(machine.Pin(2, machine.Pin.OUT))
 
+        # last will message used for offline notification
         last_will = [
             '{}/status'.format(self._base_publish_topic),
             json.dumps(dict(online=False)),
@@ -69,13 +70,49 @@ class Core:
         )
         self._connection.DEBUG = True
 
-        self._loop = asyncio.get_event_loop()  # type: AbstractEventLoop
+        self._loop = asyncio.get_event_loop(64, 64)  # type: AbstractEventLoop
 
     def start(self):
         """
         Blocking start of firmware core.
         """
         self._loop.run_until_complete(self._run())
+
+    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable"):
+        """
+        Plan task for given app - already existing app task is cancelled.
+        Method called from app instances to start app loop.
+        """
+        existing_coro = self._apps_tasks.get(for_app.id)
+        if existing_coro:
+            asyncio.cancel(existing_coro)
+
+        self._loop.create_task(coro)
+
+        self._apps_tasks[for_app.id] = coro
+        return coro
+
+    async def publish(self, subtopic: str, payload: dict, retain: bool = False):
+        """
+        Publish given message in subtopic (related to base publish topic).
+        :param subtopic: specific subtopic (without /fis/from/...)
+        :param payload: message as dict
+        :param retain: should be this message retained?
+        """
+        self._status_led.on()
+        topic = '{}/{}'.format(
+            self._base_publish_topic,
+            subtopic.strip('/')
+        )
+        print('CORE: publish ./{}: {}'.format(subtopic, payload))
+        # TODO: check connection, if not ok, store message in temp list and send them after reconnection
+        await self._connection.publish(
+            topic.encode(),
+            json.dumps(payload) if payload is not None else '',
+            qos=1,
+            retain=retain,
+        )
+        self._status_led.off()
 
     async def _run(self):
         """
@@ -93,23 +130,10 @@ class Core:
         while True:
             await asyncio.sleep(5)
 
-    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable"):
-        """
-        Plan task for given app - already existing app task is cancelled.
-        """
-        existing_coro = self._apps_tasks.get(for_app.id)
-        if existing_coro:
-            asyncio.cancel(existing_coro)
-
-        self._loop.create_task(coro)
-
-        self._apps_tasks[for_app.id] = coro
-        return coro
-
     async def _on_wifi_state_change(self, state):
         """Save config with known wlans after succesfull connection to WLAN."""
         if state:
-            self.save_config()  # save reordered wlans
+            self._save_config()  # save reordered wlans
         else:
             self._status_led.on()
 
@@ -125,7 +149,7 @@ class Core:
         )
 
     async def _on_message(self, topic: bytes, payload: bytes, retained: bool):
-        """Corotunie version of message callback. """
+        """Coroutine version of message callback. """
         self._status_led.on()
         topic = topic.decode()
         try:
@@ -146,34 +170,45 @@ class Core:
             # message for some of app
             app_id = subtopic_args[0]
             app = self.apps.get(app_id)
-            await app.process(
-                payload.get('payload'),
-                subtopic_args[1:]  # exclude first app_id
-            )
-
+            try:
+                await app.process(
+                    payload.get('payload'),
+                    subtopic_args[1:]  # exclude first app_id
+                )
+            except Exception as e:
+                await self.log(
+                    content="Exception during message processing: '{}'.".format(str(e)),
+                    level=BaseApp.LOG_ERROR,
+                    app_id=app_id
+                )
         else:
-            print('CORE: Unable to process message {}.'.format(payload))
+            await self.log(
+                content="Unable to proccess message '{}'.".format(str(payload)),
+                level=BaseApp.LOG_ERROR,
+            )
 
         # self.publish('ack', {})
         self._status_led.off()
 
-    async def publish(self, subtopic: str, payload: dict, retain: bool = False):
-        self._status_led.on()
-        topic = '{}/{}'.format(
-            self._base_publish_topic,
-            subtopic.strip('/')
+    async def log(self, content, level, app_id=None):
+        """Logs custom message on given level to MQTT. With app_id given, the app channel is used, otherwise
+        node-specific topic is used."""
+        msg = dict(
+            level=level,
+            content=content,
         )
-        print('CORE: publish ./{}: {}'.format(subtopic, payload))
-        # TODO: check connection, if not ok, store message in temp list and send them after reconnection
-        await self._connection.publish(
-            topic.encode(),
-            json.dumps(payload) if payload is not None else '',
-            qos=1,
-            retain=retain,
-        )
-        self._status_led.off()
+        if app_id:
+            topic = 'app/{}/log'.format(app_id)
+        else:
+            topic = 'log'
 
-    def save_config(self):
+        await self.publish(
+            subtopic=topic,
+            payload=msg,
+        )
+
+    def _save_config(self):
+        """Saves actual config from memory to config file."""
         with open(CONFIG_FILE, 'w') as f:
             f.write(json.dumps(self._config))
 

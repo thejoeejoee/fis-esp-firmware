@@ -17,13 +17,13 @@ class App(BaseApp):
         if action == self.ACTION_INIT:
             config.update(id=app_id)
             app_key = msg.get('app')
+            app = None
 
             # already existing app
             if app_id in self._core.apps:
                 app = self._core.apps.get(app_id)
-                app._config.update(config)
+                app.config.update(config)
                 print('CONF: New config {} ({}).'.format(app._config, app_id))
-                await app.init()  # reinit
 
             # new app
             elif app_key in APPS:
@@ -32,7 +32,24 @@ class App(BaseApp):
                     config,
                 )
                 print('CONF: New app {} ({}).'.format(app_key, app_id))
+            else:
+                pass  # TODO what?
+
+            if not app:
+                return
+
+            try:
                 await app.init()
+            except Exception as e:
+                await self._log(
+                    content="Error during app {} init with config '{}': '{}'".format(
+                        app_key,
+                        app.config,
+                        str(e)
+                    ),
+                    level=self.LOG_ERROR,
+                    app_id=app_id,  # ERROR of specific app, not error of ConfigApp
+                )
 
         # removing app
         elif action == self.ACTION_REMOVE:

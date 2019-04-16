@@ -18,7 +18,11 @@ class App(BaseApp):
                 int(self._config.get('port')),
             ),
         )
-        self._interval = max((float(self._config.get('interval') or 0), 3)) - 3  # export interval
+        self._interval = max((
+            float(self._config.get('interval') or 0),
+            self.MEASURE_EXPORT_DELAY
+        )) - self.MEASURE_EXPORT_DELAY  # export
+        # interval
 
         print('DHT: Scheduled measure')
         self._run_app_task(self._run_measurement())
@@ -30,9 +34,11 @@ class App(BaseApp):
         while True:
             try:
                 self._dht.measure()
-            except OSError:
-                print('DHT: Something wrong :-(')
-                # TODO: publish log with fail
+            except OSError as e:
+                await self._log(
+                    content="Failed to send mesasure command to sensor: {}.".format(e),
+                    level=self.LOG_ERROR,
+                )
                 await asyncio.sleep(self._interval)
                 continue
 
