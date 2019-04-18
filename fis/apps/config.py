@@ -58,8 +58,6 @@ class App(BaseApp):
                 app._plan_app_task(coro=None)
                 app.deinit()
                 del self._core.apps[app_id]
-                if app_id in self._core._apps_tasks:
-                    asyncio.cancel(self._core._apps_tasks.get(app_id))
 
         else:
             print('CONF: unknown {}.'.format(msg))

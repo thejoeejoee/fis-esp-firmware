@@ -76,7 +76,8 @@ class Core:
         """
         Blocking start of firmware core.
         """
-        self._loop.run_until_complete(self._run())
+        self._loop.create_task(self._run())
+        self._loop.run_forever()
 
     def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable" = None):
         """
@@ -87,6 +88,7 @@ class Core:
         existing_coro = self._apps_tasks.get(for_app.id)
         if existing_coro:
             asyncio.cancel(existing_coro)
+            del self._apps_tasks[for_app.id]
 
         if not coro:
             return None
@@ -129,9 +131,6 @@ class Core:
             print('Connection failed: {}.'.format(str(e)))
             return
         self._status_led.off()
-
-        while True:
-            await asyncio.sleep(5)
 
     async def _on_wifi_state_change(self, state):
         """Save config with known wlans after succesfull connection to WLAN."""

@@ -1,7 +1,6 @@
 from .mqtt_as import MQTTClient as BaseMQTTClient
 from .mqtt_as import esp32_pause, asyncio, ticks_diff, ticks_ms
 
-
 class MQTTConnection(BaseMQTTClient):
     MAX_ATTEMPTS = 3
 
@@ -10,7 +9,28 @@ class MQTTConnection(BaseMQTTClient):
         self._creds = wifi_creds
         self._status_led = status_led
 
+    async def _status_led_controller(self):
+        """Notifier about wifi status - led is blinking in case of disconnected wifi."""
+        while True:
+            if not self.isconnected():
+                self._status_led.on()
+                await asyncio.sleep(.5)
+                self._status_led.off()
+                await asyncio.sleep(.5)
+            else:
+                await asyncio.sleep(5)
+
     async def wifi_connect(self):
+        """
+        Custom reimplementation of wifi connection - differences:
+        - support only for ESP32
+        - support for multiple wlan credentials
+        - at first call starts wifi notifier
+        """
+        if not self._has_connected:
+            loop = asyncio.get_event_loop()
+            loop.create_task(self._status_led_controller())  # User handler.
+
         s = self._sta_if
 
         cred_index = 0
