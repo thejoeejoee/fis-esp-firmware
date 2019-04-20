@@ -31,13 +31,13 @@ class NeoPixelDisplay(framebuf.FrameBuffer):
             self._np[index] = self.color_to_rgb(color)
         self._np.write()
 
-    def compact_text(self, text: str, x: int, y: int, c: int = 0b00100101):
+    def compact_text(self, text: str, x: int, y: int, color: int = 0b00100101):
         for i, s in enumerate(text):
             self.text(
                 s,
                 x - 1 + i * self.CHAR_WIDTH + i,
                 y,
-                c,
+                color,
             )
 
     @staticmethod

@@ -16,7 +16,6 @@ class App(BaseApp):
         self._display = NeoPixelDisplay(
             neopixel.NeoPixel(
                 machine.Pin(
-                    # TODO: load parameters?
                     int(self._config.get('port')),
                     mode=machine.Pin.OUT
                 ),
@@ -26,7 +25,6 @@ class App(BaseApp):
             height,
             first_line_backward=True,
         )
-        # TODO: store last color in init
         self._color = self._color or 0b00100101
 
     async def process(self, payload: dict, subtopics: list):
