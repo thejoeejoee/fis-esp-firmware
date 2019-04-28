@@ -70,6 +70,7 @@ class Core:
         )
         self._connection.DEBUG = True
 
+        # 64 running tasks queue capacity, 64 waiting tasks queue capacity,
         self._loop = asyncio.get_event_loop(64, 64)  # type: AbstractEventLoop
 
     def start(self):
