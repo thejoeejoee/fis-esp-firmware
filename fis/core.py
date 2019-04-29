@@ -40,6 +40,7 @@ class Core:
         self._id = binascii.hexlify(machine.unique_id()).decode()
         self._base_publish_topic = 'fis/from/{}'.format(self._id)
         self._base_subscribe_topic = 'fis/to/{}'.format(self._id)
+        print('\nCORE: node ID: {}\n'.format(self._id))
 
         self.apps = dict(
             config=ConfigApp(self),
