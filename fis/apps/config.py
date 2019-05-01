@@ -6,15 +6,16 @@ import uasyncio as asyncio
 class App(BaseApp):
     ACTION_INIT = 'init'
     ACTION_REMOVE = 'remove'
+    ACTION_DEPLOY_FILE = 'deploy'
 
     async def process(self, msg: dict, subtopics: list):
-        config = msg.get('config')
         action = msg.get('action')
         app_id = subtopics[0]
         from . import APPS
 
         # initialization or reinitialization
         if action == self.ACTION_INIT:
+            config = msg.get('config')
             config.update(id=app_id)
             app_key = msg.get('app')
             app = None
@@ -58,6 +59,11 @@ class App(BaseApp):
                 app._plan_app_task(coro=None)
                 app.deinit()
                 del self._core.apps[app_id]
+
+        # deploy new file
+        elif action == self.ACTION_DEPLOY_FILE:
+            print(msg, subtopics)
+
 
         else:
             print('CONF: unknown {}.'.format(msg))

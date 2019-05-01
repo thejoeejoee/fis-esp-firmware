@@ -5,5 +5,3 @@ try:
     c.start()
 except Exception as e:
     machine.reset()
-
-

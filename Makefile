@@ -1,51 +1,78 @@
-PORT=/dev/ttyUSB0
-MICROPYTHON_BINARY_URL=http://micropython.org/resources/firmware/esp32-20190125-v1.10.bin
-MICROPYTHON_BINARY=esp-micropython.bin
+# default port with connected ESP
+PORT ?= /dev/ttyUSB0
 
+# used broker for remote deploy
+BROKER_URL ?= fis.josefkolar.cz
+BROKER_USERNAME ?= fis-esp-firmware-deploy
+BROKER_PASSWORD ?= kqv5RS9LJ6RLY2eZ
 
-install:
+# supported micropython
+MICROPYTHON_BINARY_URL = http://micropython.org/resources/firmware/esp32-20190125-v1.10.bin
+MICROPYTHON_BINARY = esp-micropython.bin
+
+PYTHON_FILE_DUMPER="F=__import__('sys').argv[1];print(__import__('json').dumps(dict(file=F,content=open(F).read())))"
+
+AMPY_DELAY = 0.5
+
+AMPY := ampy -p $(PORT) -d $(AMPY_DELAY)
+
+install: ## Perform installation proccess on purely new ESP32 (uPython+libs+fis+bootloader).
 	make flash-micropython
 	make install-libs
 	make install-fis
 	make console-with-reset
 
-flash-micropython: erase-flash $(MICROPYTHON_BINARY)
+flash-micropython: erase-flash $(MICROPYTHON_BINARY) ## Flash micropython to connected ESP32.
 	esptool.py --chip esp32 --port $(PORT) --baud 460800 write_flash -z 0x1000 $(MICROPYTHON_BINARY)
 
-$(MICROPYTHON_BINARY):
+$(MICROPYTHON_BINARY): ## Downloads micropython binary.
 	wget $(MICROPYTHON_BINARY_URL) -O $(MICROPYTHON_BINARY)
 
-erase-flash:
+erase-flash: ## Erase entire flash on connected ESP32.
 	esptool.py --chip esp32 --port $(PORT) erase_flash
 
-put-config:
+put-config: ## Put config.json to ESP32.
 	make reset-chip
-	ampy -p $(PORT) put config.json
-put-install:
-	make reset-chip
-	ampy -p $(PORT) put _install.py
+	$(AMPY) put config.json
 
-install-libs: put-config put-install
+put-install: ## Put _install.py (first start install script) to ESP32.
 	make reset-chip
-	ampy -p $(PORT) run _install.py
+	$(AMPY) put _install.py
 
-install-fis:
+install-libs: put-config put-install ## Install required libs (via install script) on connected ESP32.
 	make reset-chip
-	ampy -p $(PORT) put fis
-	make reset-chip
-	ampy -p $(PORT) put boot.py
+	$(AMPY) run _install.py
 
-enable-autoloader:
+install-fis: ## Install FIS package with fis-bootloader on to ESP32.
 	make reset-chip
-	ampy -p $(PORT) put main.py
+	$(AMPY) rmdir fis || true
+	make reset-chip
+	# find fis -type f | xargs -n 1 $(AMPY) put
+	$(AMPY) put fis/ fis
+	make reset-chip
+	$(AMPY) rm boot.py || true
+	make reset-chip
+	$(AMPY) put boot.py
 
-console-with-reset:
+enable-autoloader: ## Enable FIS autoloader on ESP32.
+	make reset-chip
+	$(AMPY) put main.py
+
+console-with-reset: ## Run console after ESP32 reset.
 	make reset-chip
 	make console
 
-console:
+console: ## Run console without reset.
 	picocom $(PORT) -b115200
 
-
-reset-chip:
+reset-chip: ## Reset connected chip.
 	esptool.py --chip esp32 --port $(PORT) --after hard_reset read_mac && sleep 2
+
+remote-deploy: ## Based on given NODE_ID performs remote deploy (from actual fis/, so be careful) via broker to target.
+	test -n $(NODE_ID) || echo Missing NODE_ID! || exit 2;
+	find fis -type f |\
+	 xargs -n 1 python -c $(PYTHON_FILE_DUMPER) |\
+	 mosquitto_pub -q 1 -u $(BROKER_USERNAME) -P $(BROKER_PASSWORD) -h $(BROKER_URL) -t fis/to/$(NODE_ID)/app/config -l
+
+help: ## Display available commands with description.
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

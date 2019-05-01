@@ -1,5 +1,10 @@
 from .mqtt_as import MQTTClient as BaseMQTTClient
-from .mqtt_as import esp32_pause, asyncio, ticks_diff, ticks_ms
+from .mqtt_as import esp32_pause, asyncio, ticks_diff, ticks_ms, gc
+from micropython import const
+
+_DEFAULT_MS = const(20)
+
+gc.collect()
 
 class MQTTConnection(BaseMQTTClient):
     MAX_ATTEMPTS = 3
@@ -75,6 +80,18 @@ class MQTTConnection(BaseMQTTClient):
 
         self.dprint('Got reliable connection')
         # Timed out: assumed reliable
+
+    async def _handle_msg(self):
+        try:
+            while self.isconnected():
+                async with self.lock:
+                    gc.collect()
+                    await self.wait_msg()  # Immediate return if no message
+                await asyncio.sleep_ms(_DEFAULT_MS)  # Let other tasks get lock
+
+        except OSError:
+            pass
+        self._reconnect()  # Broker or WiFi fail.
 
     def dprint(self, *msg):
         # if self.DEBUG:

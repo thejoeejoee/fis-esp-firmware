@@ -78,6 +78,7 @@ class Core:
         """
         Blocking start of firmware core.
         """
+        print('\nCORE: node ID: {}\n'.format(self._id))
         self._loop.create_task(self._run())
         self._loop.run_forever()
 
