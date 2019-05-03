@@ -219,6 +219,3 @@ class Core:
         """Saves actual config from memory to config file."""
         with open(CONFIG_FILE, 'w') as f:
             f.write(json.dumps(self._config))
-
-    def __del__(self):
-        self._wlan.__del__()

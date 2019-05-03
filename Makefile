@@ -1,6 +1,8 @@
 # default port with connected ESP
 PORT ?= /dev/ttyUSB0
 
+MPY_CROSS ?= python -m mpy_cross
+
 # used broker for remote deploy
 BROKER_URL ?= fis.josefkolar.cz
 BROKER_USERNAME ?= fis-esp-firmware-deploy
@@ -11,6 +13,11 @@ MICROPYTHON_BINARY_URL = http://micropython.org/resources/firmware/esp32-2019012
 MICROPYTHON_BINARY = esp-micropython.bin
 
 PYTHON_FILE_DUMPER="F=__import__('sys').argv[1];print(__import__('json').dumps(dict(file=F,content=open(F).read())))"
+#PYTHON_FILE_DUMPER="B=__import__('base64');\
+#F=__import__('sys').argv[1];\
+#print(__import__('json').dumps(dict(file=F,content=B.b64encode(open(F, 'rb').read()))))\
+#"
+
 
 AMPY_DELAY = 0.5
 
@@ -58,6 +65,10 @@ enable-autoloader: ## Enable FIS autoloader on ESP32.
 	make reset-chip
 	$(AMPY) put main.py
 
+disable-autoloader: ## Disable FIS autoloader on ESP32.
+	make reset-chip
+	$(AMPY) rm main.py
+
 console-with-reset: ## Run console after ESP32 reset.
 	make reset-chip
 	make console
@@ -70,7 +81,9 @@ reset-chip: ## Reset connected chip.
 
 remote-deploy: ## Based on given NODE_ID performs remote deploy (from actual fis/, so be careful) via broker to target.
 	test -n $(NODE_ID) || echo Missing NODE_ID! || exit 2;
-	find fis -type f |\
+	# find fis -type f -regex ".*\.py" |\
+	# xargs -n1 -IFILE sh -c "python -m mpy_cross FILE && echo FILE | sed s/.py/.mpy/" |\
+	find fis -type f -regex ".*\.py" |\
 	 xargs -n 1 python -c $(PYTHON_FILE_DUMPER) |\
 	 mosquitto_pub -q 1 -u $(BROKER_USERNAME) -P $(BROKER_PASSWORD) -h $(BROKER_URL) -t fis/to/$(NODE_ID)/app/config -l
 
