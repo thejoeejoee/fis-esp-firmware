@@ -1,20 +1,22 @@
 from .base import BaseApp
 
 import uasyncio as asyncio
+import machine
 
 
 class App(BaseApp):
     ACTION_INIT = 'init'
     ACTION_REMOVE = 'remove'
     ACTION_DEPLOY_FILE = 'deploy'
+    ACTION_RESET = 'reset'
 
     async def process(self, msg: dict, subtopics: list):
         action = msg.get('action')
-        app_id = subtopics[0]
         from . import APPS
 
         # initialization or reinitialization
         if action == self.ACTION_INIT:
+            app_id = subtopics[0]
             config = msg.get('config')
             config.update(id=app_id)
             app_key = msg.get('app')
@@ -54,6 +56,7 @@ class App(BaseApp):
 
         # removing app
         elif action == self.ACTION_REMOVE:
+            app_id = subtopics[0]
             if app_id in self._core.apps:
                 app = self._core.apps.get(app_id)
                 app._plan_app_task(coro=None)
@@ -61,8 +64,8 @@ class App(BaseApp):
                 del self._core.apps[app_id]
 
         # deploy new file
-        elif action == self.ACTION_DEPLOY_FILE:
-            print(msg, subtopics)
+        elif action == self.ACTION_RESET:
+            machine.reset()
 
 
         else:

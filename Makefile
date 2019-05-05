@@ -9,7 +9,7 @@ BROKER_USERNAME ?= fis-esp-firmware-deploy
 BROKER_PASSWORD ?= kqv5RS9LJ6RLY2eZ
 
 # supported micropython
-MICROPYTHON_BINARY_URL = http://micropython.org/resources/firmware/esp32-20190125-v1.10.bin
+MICROPYTHON_BINARY_URL = http://micropython.org/resources/firmware/esp32-20180511-v1.9.4.bin
 MICROPYTHON_BINARY = esp-micropython.bin
 
 PYTHON_FILE_DUMPER="F=__import__('sys').argv[1];print(__import__('json').dumps(dict(file=F,content=open(F).read())))"
@@ -85,6 +85,11 @@ remote-deploy: ## Based on given NODE_ID performs remote deploy (from actual fis
 	# xargs -n1 -IFILE sh -c "python -m mpy_cross FILE && echo FILE | sed s/.py/.mpy/" |\
 	find fis -type f -regex ".*\.py" |\
 	 xargs -n 1 python -c $(PYTHON_FILE_DUMPER) |\
+	 mosquitto_pub -q 1 -u $(BROKER_USERNAME) -P $(BROKER_PASSWORD) -h $(BROKER_URL) -t fis/to/$(NODE_ID)/app/config -l
+
+remote-reset: ## Based on given NODE_ID performs remote reset - IF IS NOT ENABLED AUTOLOADER, NODE FREEZES AFTER RESET.
+	test -n $(NODE_ID) || echo Missing NODE_ID! || exit 2;
+	python -c "print(__import__('json').dumps(dict(payload=dict(action='reset'))))" |\
 	 mosquitto_pub -q 1 -u $(BROKER_USERNAME) -P $(BROKER_PASSWORD) -h $(BROKER_URL) -t fis/to/$(NODE_ID)/app/config -l
 
 help: ## Display available commands with description.
