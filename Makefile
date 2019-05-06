@@ -50,7 +50,7 @@ install-libs: put-config put-install ## Install required libs (via install scrip
 	make reset-chip
 	$(AMPY) run _install.py
 
-install-fis: ## Install FIS package with fis-bootloader on to ESP32.
+install-fis: disable-autoloader ## Install FIS package with fis-bootloader on to ESP32.
 	make reset-chip
 	$(AMPY) rmdir fis || true
 	make reset-chip
@@ -67,7 +67,7 @@ enable-autoloader: ## Enable FIS autoloader on ESP32.
 
 disable-autoloader: ## Disable FIS autoloader on ESP32.
 	make reset-chip
-	$(AMPY) rm main.py
+	$(AMPY) rm main.py || true
 
 console-with-reset: ## Run console after ESP32 reset.
 	make reset-chip

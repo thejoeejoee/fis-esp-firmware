@@ -28,13 +28,13 @@ class App(BaseApp):
         self._color = self._color or 0b00100101
 
     async def process(self, payload: dict, subtopics: list):
-        if payload.get('color'):
+        if payload.get('color') is not None:
             self._color = self._display.rgb_to_color(*payload.get('color'))
 
-        if payload.get('text'):
+        if payload.get('text') is not None:
             self._display.fill(0)
             self._display.compact_text(
-                payload.get('text'),
+                str(payload.get('text')),
                 0,
                 1,
                 self._color,

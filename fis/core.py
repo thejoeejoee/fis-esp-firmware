@@ -68,6 +68,7 @@ class Core:
             wifi_coro=self._on_wifi_state_change,
             connect_coro=self._on_estabilished_connection,
             subs_cb=self._on_message_sync,
+            clean=False,
         )
         self._connection.DEBUG = True
 
@@ -139,10 +140,11 @@ class Core:
         """Save config with known wlans after succesfull connection to WLAN."""
         if state:
             self._save_config()  # save reordered wlans
+            await self._on_estabilished_connection(None)
         else:
             self._status_led.on()
 
-    async def _on_estabilished_connection(self, connection: MQTTConnection):
+    async def _on_estabilished_connection(self, connection: MQTTConnection = None):
         """After broker connection is estabilished, subscribe main channel and publish node status."""
         await self._connection.subscribe('{}/#'.format(self._base_subscribe_topic).encode())
         await self.publish('status', dict(online=True), retain=True)  # hello there!
