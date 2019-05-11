@@ -8,6 +8,7 @@ from uasyncio import sleep, get_event_loop
 
 
 class KeypadDriver:
+    # TODO: add also app
     def __init__(self, rows, cols):
         self._rows = [Pin(r) for r in rows]
         self._cols = [Pin(c) for c in cols]

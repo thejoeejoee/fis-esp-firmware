@@ -14,9 +14,16 @@ class App(BaseApp):
     _dht = None
     _interval = 10
     MEASURE_EXPORT_DELAY = 3
+    SENSORS = {
+        None: dht.DHT22,
+        'dht-22': dht.DHT22,
+        'dht-11': dht.DHT11,
+    }
 
     async def init(self):
-        self._dht = dht.DHT22(
+        sensor_class = self.SENSORS.get(self._config.get('type')) or self.SENSORS.get(None)
+
+        self._dht = sensor_class(
             machine.Pin(
                 int(self._config.get('port')),
             ),
