@@ -1,7 +1,7 @@
-while True:
-    try:
-        c.start()
-    except OSError:
-        pass
+import machine
 
-
+try:
+    # 'c' is available from boot.py
+    c.start()
+except Exception as e:
+    machine.reset()

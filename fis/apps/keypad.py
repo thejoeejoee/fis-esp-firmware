@@ -8,26 +8,14 @@ import uasyncio as asyncio
 
 
 class App(BaseApp):
-    _dht = None
-    _interval = 10
+    _rows = _cols = None
     MEASURE_EXPORT_DELAY = 3
 
     async def init(self):
-        self._dht = dht.DHT22(
-            machine.Pin(
-                int(self._config.get('port')),
-            ),
-        )
-        self._interval = max((
-            float(self._config.get('interval') or 0),
-            self.MEASURE_EXPORT_DELAY
-        )) - self.MEASURE_EXPORT_DELAY  # export
-        # interval
+        self._rows = []
+        self._plan_app_task(self._run())
 
-        print('DHT: Scheduled measure')
-        self._plan_app_task(self._run_measurement())
-
-    async def _run_measurement(self):
+    async def _run(self):
         while True:
             try:
                 self._dht.measure()
