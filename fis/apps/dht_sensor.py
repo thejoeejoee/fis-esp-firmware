@@ -35,7 +35,7 @@ class App(BaseApp):
         # interval
 
         print('DHT: Scheduled measure')
-        self._plan_app_task(self._run_measurement())
+        await self._plan_app_task(self._run_measurement())
 
     async def _run_measurement(self):
         while True:

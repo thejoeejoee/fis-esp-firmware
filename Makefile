@@ -19,11 +19,12 @@ PYTHON_FILE_DUMPER="F=__import__('sys').argv[1];print(__import__('json').dumps(d
 #"
 
 
-AMPY_DELAY = 0.5
+AMPY_DELAY = 1
 
 AMPY := ampy -p $(PORT) -d $(AMPY_DELAY)
 
 install: ## Perform installation proccess on purely new ESP32 (uPython+libs+fis+bootloader).
+	make reset-chip
 	make flash-micropython
 	make install-libs
 	make install-fis
@@ -77,7 +78,7 @@ console: ## Run console without reset.
 	picocom $(PORT) -b115200
 
 reset-chip: ## Reset connected chip.
-	esptool.py --chip esp32 --port $(PORT) --after hard_reset read_mac && sleep 2
+	sleep 4 && esptool.py --chip esp32 --port $(PORT) --after hard_reset read_mac && sleep 4
 
 remote-deploy: ## Based on given NODE_ID performs remote deploy (from actual fis/, so be careful) via broker to target.
 	test -n $(NODE_ID) || echo Missing NODE_ID! || exit 2;

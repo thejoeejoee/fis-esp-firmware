@@ -86,7 +86,7 @@ class Core:
         self._loop.create_task(self._run())
         self._loop.run_forever()
 
-    def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable" = None):
+    async def run_app_task(self, for_app: BaseApp, coro: "typing.Awaitable" = None):
         """
         Plan task for given app - already existing app task is cancelled.
         Method called from app instances to start app loop.
@@ -94,7 +94,9 @@ class Core:
         """
         existing_coro = self._apps_tasks.get(for_app.id)
         if existing_coro:
+            print('CORE: Cancelled task for {}: {}.'.format(for_app, existing_coro))
             asyncio.cancel(existing_coro)
+            await asyncio.sleep_ms(10)
             del self._apps_tasks[for_app.id]
 
         if not coro:
@@ -180,20 +182,19 @@ class Core:
             # message for some of app
             app_id = subtopic_args[0]
             app = self.apps.get(app_id)
-            if not app:
-                pass  # TODO: (retained) message maybe come to early, so store it and wait for app config
-
-            try:
-                await app.process(
-                    payload.get('payload'),
-                    subtopic_args[1:]  # exclude first app_id
-                )
-            except Exception as e:
-                await self.log(
-                    content="Exception during message processing: '{}'.".format(str(e)),
-                    level=BaseApp.LOG_ERROR,
-                    app_id=app_id
-                )
+            # TODO: (retained) message maybe come to early, so store it and wait for app config
+            if app:
+                try:
+                    await app.process(
+                        payload.get('payload'),
+                        subtopic_args[1:]  # exclude first app_id
+                    )
+                except Exception as e:
+                    await self.log(
+                        content="Exception during message processing: '{}'.".format(str(e)),
+                        level=BaseApp.LOG_ERROR,
+                        app_id=app_id
+                    )
         else:
             await self.log(
                 content="Unable to proccess message '{}'.".format(str(payload)),

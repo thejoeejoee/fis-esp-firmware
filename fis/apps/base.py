@@ -47,9 +47,9 @@ class BaseApp(object):
             app_id=app_id or self.id,
         )
 
-    def _plan_app_task(self, coro=None):
+    async def _plan_app_task(self, coro=None):
         """Asks core for start app corutine."""
-        return self._core.run_app_task(
+        return await self._core.run_app_task(
             for_app=self,
             coro=coro
         )

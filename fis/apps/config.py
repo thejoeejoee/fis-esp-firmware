@@ -46,7 +46,7 @@ class App(BaseApp):
                 return
 
             try:
-                app._plan_app_task(coro=None)  # reset planned task
+                await app._plan_app_task(coro=None)  # reset planned task
                 await app.init()
             except Exception as e:
                 await self._error(
@@ -63,7 +63,7 @@ class App(BaseApp):
             app_id = subtopics[0]
             if app_id in self._core.apps:
                 app = self._core.apps.get(app_id)
-                app._plan_app_task(coro=None)
+                await app._plan_app_task(coro=None)
                 app.deinit()
                 del self._core.apps[app_id]
 

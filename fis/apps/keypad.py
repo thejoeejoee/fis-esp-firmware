@@ -16,7 +16,7 @@ class App(BaseApp):
 
     async def init(self):
         self._rows = []
-        self._plan_app_task(self._run())
+        await self._plan_app_task(self._run())
 
     async def _run(self):
         while True:
